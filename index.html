@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Eisosome Explorer — Yeast Membrane Sandbox</title>
+<style>
+  :root{
+    --bg:#07101c; --panel:#0d1a2b; --panel2:#102238; --text:#f5fbff; --muted:#a9bfd1;
+    --mem:#65d9ff; --pil:#ffcf5a; --sur:#ff77ad; --nce:#9d8cff; --cargo:#74eca7; --danger:#ff806e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(circle at 30% 10%,#102946 0,#07101c 52%);color:var(--text);
+       font-family:Inter,ui-rounded,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+  .app{max-width:1200px;margin:auto;padding:20px}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  h1{margin:0;font-size:clamp(28px,5vw,52px);letter-spacing:-.04em}
+  .subtitle{color:var(--muted);max-width:720px;line-height:1.45}
+  .badge{border:1px solid #2a4661;background:#0c1a29;padding:8px 12px;border-radius:999px;font-size:13px}
+  .grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.75fr);gap:16px;margin-top:18px}
+  .card{background:linear-gradient(180deg,rgba(17,35,57,.96),rgba(10,24,39,.96));border:1px solid #23405b;
+        border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.28);overflow:hidden}
+  .stage{position:relative;min-height:610px;padding:18px}
+  .stage-top{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .seg{display:flex;background:#08131f;border:1px solid #24435e;border-radius:14px;padding:4px;gap:4px}
+  button{font:inherit;color:var(--text);border:0;cursor:pointer}
+  .seg button{background:transparent;padding:9px 12px;border-radius:10px}
+  .seg button.active{background:#1e3a55}
+  .pill{background:#17324a;border:1px solid #2e5271;padding:9px 12px;border-radius:12px}
+  .pill:hover{filter:brightness(1.12)}
+  .svgwrap{height:470px;margin-top:12px;border-radius:18px;overflow:hidden;background:
+    linear-gradient(180deg,#071622 0 48%,#08111b 48% 100%);border:1px solid #1a3449;position:relative}
+  svg{width:100%;height:100%;display:block}
+  .hint{position:absolute;left:16px;bottom:14px;background:rgba(5,14,23,.78);backdrop-filter:blur(8px);
+        padding:9px 12px;border-radius:12px;color:#cce3f2;font-size:13px;border:1px solid #23425a}
+  .side{padding:18px}
+  h2{font-size:18px;margin:0 0 12px}
+  .explain{background:#0a1725;border:1px solid #213c54;padding:13px;border-radius:15px;line-height:1.45;color:#d9ebf6}
+  .bigidea{font-size:18px;font-weight:800;color:#fff}
+  .controls{display:grid;gap:15px;margin-top:16px}
+  label{font-size:14px;font-weight:700;display:flex;justify-content:space-between;gap:10px}
+  input[type=range]{width:100%;accent-color:#78d8ff}
+  .toggleRow{display:flex;justify-content:space-between;align-items:center;gap:14px}
+  .switch{width:48px;height:28px;background:#223649;border-radius:999px;padding:3px;position:relative;cursor:pointer}
+  .switch::after{content:"";display:block;width:22px;height:22px;background:white;border-radius:50%;transition:.2s}
+  .switch.on{background:#3a8e64}.switch.on::after{transform:translateX(20px)}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;font-size:13px;color:#c6dce9}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+  .challenge{margin-top:16px;background:#132238;border:1px dashed #3f6684;padding:14px;border-radius:16px}
+  .challenge strong{display:block;margin-bottom:6px}
+  .answer{display:none;margin-top:8px;color:#d8fbe6}
+  .footer{margin-top:16px;padding:16px 18px;display:flex;align-items:flex-start;gap:12px;justify-content:space-between;flex-wrap:wrap}
+  .science{max-width:850px;color:#aec4d4;font-size:13px;line-height:1.5}
+  .mini{font-size:12px;color:#7fa0b8}
+  .tooltip{position:absolute;pointer-events:none;display:none;background:#06101a;border:1px solid #31536c;
+           border-radius:12px;padding:9px 10px;font-size:12px;max-width:220px;z-index:10;box-shadow:0 10px 30px #0008}
+  @media(max-width:850px){.grid{grid-template-columns:1fr}.stage{min-height:550px}.svgwrap{height:410px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div>
+    <h1>🧫 Eisosome Explorer</h1>
+    <div class="subtitle">A hands-on yeast membrane sandbox: bend the membrane with BAR proteins, brace the edges with tetraspanners, and see why Sur7 helps an eisosome stay a furrow instead of curling into a tube.</div>
+  </div>
+  <div class="badge">Kid mode • scientifically grounded</div>
+</header>
+
+<div class="grid">
+  <section class="card stage">
+    <div class="stage-top">
+      <div class="seg" aria-label="experiment presets">
+        <button id="wtBtn" class="active">Normal yeast</button>
+        <button id="koBtn">Remove Sur7</button>
+        <button id="rescueBtn">Rescue Sur7</button>
+      </div>
+      <button class="pill" id="animateBtn">▶ Animate forces</button>
+    </div>
+
+    <div class="svgwrap" id="svgwrap">
+      <div class="tooltip" id="tip"></div>
+      <svg viewBox="0 0 850 470" role="img" aria-label="Interactive cross-section of a yeast eisosome">
+        <defs>
+          <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="cyto" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0d2133"/><stop offset="1" stop-color="#07111b"/></linearGradient>
+        </defs>
+        <rect width="850" height="470" fill="url(#cyto)"/>
+        <text x="28" y="38" fill="#8fb0c5" font-size="15">Outside the cell</text>
+        <text x="28" y="445" fill="#8fb0c5" font-size="15">Inside the yeast cell</text>
+
+        <g id="membraneGroup" data-tip="Plasma membrane — the cell's flexible outer boundary.">
+          <path id="memShadow" d="" fill="none" stroke="#1b6884" stroke-width="16" opacity=".35"/>
+          <path id="membrane" d="" fill="none" stroke="#65d9ff" stroke-width="8" stroke-linecap="round" filter="url(#glow)"/>
+        </g>
+
+        <g id="surGroup" data-tip="Sur7-family tetraspanners cross the membrane four times and form strands near the upper edges of the eisosome furrow."></g>
+        <g id="pilGroup" data-tip="Pil1/Lsp1 BAR-domain proteins assemble on the inner face and favor inward membrane curvature."></g>
+        <g id="nceGroup" data-tip="Nce102 is another tetraspanner-family component of MCC/eisosomes and is important for normal domain organization."></g>
+        <g id="cargoGroup" data-tip="Transporter proteins can live in these membrane domains; eisosomes are linked to transporter organization and protection from endocytic turnover."></g>
+
+        <g id="forceArrows" opacity="0"></g>
+        <text id="stateLabel" x="425" y="92" text-anchor="middle" fill="#ffffff" font-size="24" font-weight="800"></text>
+        <text id="stateSub" x="425" y="118" text-anchor="middle" fill="#a8c4d6" font-size="14"></text>
+      </svg>
+      <div class="hint">Tap a colored protein to learn what it does.</div>
+    </div>
+  </section>
+
+  <aside class="card side">
+    <h2>What are we testing?</h2>
+    <div class="explain" id="explain">
+      <span class="bigidea">Think of an eisosome as a tiny membrane valley.</span><br>
+      BAR proteins help bend the valley inward. Sur7 tetraspanners line its upper edges and help keep that valley from curling farther into a tube.
+    </div>
+
+    <div class="controls">
+      <div>
+        <label><span>BAR bending force</span><span id="barVal">65%</span></label>
+        <input id="barForce" type="range" min="0" max="100" value="65">
+      </div>
+      <div>
+        <label><span>Sur7 edge support</span><span id="surVal">75%</span></label>
+        <input id="surForce" type="range" min="0" max="100" value="75">
+      </div>
+      <div>
+        <label><span>PIP₂ availability</span><span id="pipVal">75%</span></label>
+        <input id="pip2" type="range" min="0" max="100" value="75">
+      </div>
+      <div class="toggleRow">
+        <div><b>Nce102 present</b><div class="mini">advanced control</div></div>
+        <div class="switch on" id="nceToggle" role="switch" aria-checked="true"></div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div><span class="dot" style="background:var(--mem)"></span>Membrane</div>
+      <div><span class="dot" style="background:var(--pil)"></span>Pil1/Lsp1</div>
+      <div><span class="dot" style="background:var(--sur)"></span>Sur7 family</div>
+      <div><span class="dot" style="background:var(--nce)"></span>Nce102</div>
+      <div><span class="dot" style="background:var(--cargo)"></span>Transporter</div>
+    </div>
+
+    <div class="challenge">
+      <strong>🎯 Teacher challenge</strong>
+      Ask: “What do you predict will happen if we remove all the Sur7-family proteins but keep Pil1?”
+      <button class="pill" id="answerBtn" style="margin-top:8px">Reveal answer</button>
+      <div class="answer" id="answer">The furrow becomes much more strongly invaginated and can curl into tube-like structures. That is what the 5× Sur7-family deletion produced in the paper.</div>
+    </div>
+  </aside>
+</div>
+
+<section class="card footer">
+  <div class="science">
+    <b>Science underneath the cartoon.</b> In budding yeast, MCC/eisosomes are stable plasma-membrane furrows. Pil1/Lsp1 BAR-domain proteins form a coat on the inner membrane surface and promote inward curvature. Haase <i>et al.</i> found that Sur7-family tetraspanners form strands near the furrow edges. Removing all five tested Sur7-family members produced strongly invaginated, tube-like Pil1 structures; re-anchoring Sur7 could rescue associated defects. This sandbox is a conceptual teaching model, not a quantitative physical simulation.
+  </div>
+  <div class="mini">Based on Haase et al., EMBO Reports 24:e57232 (2023).<br>Typical MCC/eisosome scale reported: ~200–400 nm long, 30–50 nm wide, 50–100 nm deep.</div>
+</section>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const membrane=$("membrane"), shadow=$("memShadow");
+const surG=$("surGroup"), pilG=$("pilGroup"), nceG=$("nceGroup"), cargoG=$("cargoGroup"), arrows=$("forceArrows");
+let nce=true, anim=false, phase=0;
+
+function pathFor(depth, curl){
+  const y=190, cx=425;
+  const shoulder=305;
+  const d=depth;
+  if(curl < .52){
+    return `M 55 ${y} C 140 ${y}, 225 ${y}, ${shoulder} ${y}
+      C 345 ${y}, 355 ${y+d*.45}, ${cx} ${y+d}
+      C 495 ${y+d*.45}, 505 ${y}, 545 ${y}
+      C 630 ${y}, 710 ${y}, 795 ${y}`;
+  }
+  const loop = 40 + 95*curl;
+  const bottom = y+d;
+  return `M 55 ${y} C 150 ${y}, 235 ${y}, 315 ${y}
+    C 350 ${y}, 360 ${bottom-35}, 410 ${bottom-20}
+    C ${cx-loop} ${bottom+55}, ${cx-loop} ${bottom-105}, ${cx} ${bottom-82}
+    C ${cx+loop} ${bottom-105}, ${cx+loop} ${bottom+55}, 440 ${bottom-20}
+    C 490 ${bottom-35}, 500 ${y}, 535 ${y}
+    C 620 ${y}, 700 ${y}, 795 ${y}`;
+}
+
+function clear(g){while(g.firstChild)g.removeChild(g.firstChild)}
+function circ(g,x,y,r,fill,tip){
+  const c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+  c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",r);c.setAttribute("fill",fill);
+  c.setAttribute("stroke","#06111b");c.setAttribute("stroke-width","2"); if(tip)c.dataset.tip=tip; g.appendChild(c); return c;
+}
+function line(g,x1,y1,x2,y2,stroke,w=5){
+ const l=document.createElementNS("http://www.w3.org/2000/svg","line");
+ Object.entries({x1,y1,x2,y2,stroke,"stroke-width":w,"stroke-linecap":"round"}).forEach(([k,v])=>l.setAttribute(k,v));g.appendChild(l)
+}
+function text(g,x,y,t,fill="#fff",size=12){
+ const el=document.createElementNS("http://www.w3.org/2000/svg","text");el.setAttribute("x",x);el.setAttribute("y",y);
+ el.setAttribute("fill",fill);el.setAttribute("font-size",size);el.setAttribute("text-anchor","middle");el.textContent=t;g.appendChild(el)
+}
+
+function render(){
+ const bar=+$("barForce").value/100, sur=+$("surForce").value/100, pip=+$("pip2").value/100;
+ $("barVal").textContent=Math.round(bar*100)+"%"; $("surVal").textContent=Math.round(sur*100)+"%"; $("pipVal").textContent=Math.round(pip*100)+"%";
+ const effectiveBar=bar*(.35+.65*pip)*(nce?1:.42);
+ const restraint=sur*(.25+.75*pip);
+ const imbalance=Math.max(0,effectiveBar-restraint*.68);
+ let depth=55 + effectiveBar*115 - restraint*35;
+ depth=Math.max(18,Math.min(175,depth));
+ let curl=Math.max(0,Math.min(1,(imbalance-.18)*1.9));
+ if(anim) depth += Math.sin(phase)*5;
+ const p=pathFor(depth,curl); membrane.setAttribute("d",p);shadow.setAttribute("d",p);
+
+ clear(pilG); clear(surG); clear(nceG); clear(cargoG); clear(arrows);
+
+ const pilCount=Math.round(5+10*effectiveBar);
+ for(let i=0;i<pilCount;i++){
+   const a=(i/(Math.max(1,pilCount-1))-.5)*Math.PI*.95;
+   const rx=100+curl*45, ry=42+depth*.28;
+   const x=425+Math.sin(a)*rx;
+   const y=190+depth-18-Math.cos(a)*ry;
+   circ(pilG,x,y,8,"#ffcf5a","Pil1/Lsp1: BAR proteins that assemble on the inner surface and help curve the membrane inward.");
+ }
+ const surCount=Math.round(1+7*sur);
+ [[340,190+depth*.15],[510,190+depth*.15]].forEach(([x,y],side)=>{
+   for(let i=0;i<surCount;i++){
+      const yy=y+i*8; line(surG,x+(side?-i*1.7:i*1.7),yy-10,x+(side?-i*1.7:i*1.7),yy+8,"#ff77ad",5)
+   }
+ });
+ if(nce){
+   [385,465].forEach((x)=>{line(nceG,x,212,x,236,"#9d8cff",6);line(nceG,x+8,212,x+8,236,"#9d8cff",6)});
+ }
+ [250,600].forEach(x=>{line(cargoG,x,180,x,203,"#74eca7",7);circ(cargoG,x,177,7,"#74eca7","A membrane transporter. Eisosome organization is linked to transporter localization and turnover.")});
+
+ for(let i=0;i<5;i++){ const x=375+i*25; line(arrows,x,285,x,325,"#ffcf5a",3); text(arrows,x,342,"↓","#ffcf5a",18) }
+ [338,512].forEach((x,i)=>{line(arrows,x,215,x+(i?-35:35),180,"#ff77ad",3)});
+
+ let title,sub;
+ if(curl>.48){title="Tube-like over-curvature";sub="BAR bending overwhelms edge restraint";}
+ else if(depth<50){title="Shallow membrane domain";sub="Not much inward bending";}
+ else {title="Stable eisosome furrow";sub="Curvature and edge support are balanced";}
+ $("stateLabel").textContent=title;$("stateSub").textContent=sub;
+}
+
+function preset(name){
+ ["wtBtn","koBtn","rescueBtn"].forEach(id=>$(id).classList.remove("active"));
+ if(name==="wt"){ $("wtBtn").classList.add("active"); $("barForce").value=65;$("surForce").value=75;$("pip2").value=75;nce=true; }
+ if(name==="ko"){ $("koBtn").classList.add("active"); $("barForce").value=78;$("surForce").value=0;$("pip2").value=78;nce=true; }
+ if(name==="rescue"){ $("rescueBtn").classList.add("active"); $("barForce").value=78;$("surForce").value=82;$("pip2").value=78;nce=true; }
+ $("nceToggle").classList.toggle("on",nce);$("nceToggle").setAttribute("aria-checked",nce);render();
+}
+$("wtBtn").onclick=()=>preset("wt");$("koBtn").onclick=()=>preset("ko");$("rescueBtn").onclick=()=>preset("rescue");
+["barForce","surForce","pip2"].forEach(id=>$(id).addEventListener("input",render));
+$("nceToggle").onclick=()=>{nce=!nce;$("nceToggle").classList.toggle("on",nce);$("nceToggle").setAttribute("aria-checked",nce);render()};
+$("answerBtn").onclick=()=>{$("answer").style.display=$("answer").style.display==="block"?"none":"block"};
+$("animateBtn").onclick=()=>{anim=!anim;$("animateBtn").textContent=anim?"⏸ Pause forces":"▶ Animate forces";arrows.setAttribute("opacity",anim?"1":"0");if(anim)tick()};
+function tick(){if(!anim)return;phase+=.08;render();arrows.setAttribute("opacity","1");requestAnimationFrame(tick)}
+
+const tip=$("tip"),wrap=$("svgwrap");
+wrap.addEventListener("pointermove",e=>{
+ let t=e.target.closest("[data-tip]"); if(!t){tip.style.display="none";return}
+ tip.textContent=t.dataset.tip||t.parentElement?.dataset.tip||"";tip.style.display="block";
+ const r=wrap.getBoundingClientRect();tip.style.left=Math.min(e.clientX-r.left+12,r.width-235)+"px";tip.style.top=(e.clientY-r.top+12)+"px";
+});
+wrap.addEventListener("pointerleave",()=>tip.style.display="none");
+render();
+</script>
+</body>
+</html>
